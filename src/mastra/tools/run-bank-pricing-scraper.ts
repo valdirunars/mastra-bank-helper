@@ -8,10 +8,10 @@ import {
   type BankPricingCatalog,
   type BankPricingToolInput,
 } from './bank-pricing-schemas';
+import { filterCatalogByTopic } from './filter-catalog';
+import { resolveProjectRoot } from './project-root';
 
 const execFileAsync = promisify(execFile);
-
-const projectRoot = process.cwd();
 
 async function pathExists(target: string): Promise<boolean> {
   try {
@@ -26,6 +26,7 @@ export async function runBankPricingScraper(
   configPath: string,
   input: BankPricingToolInput = {},
 ): Promise<BankPricingCatalog> {
+  const projectRoot = await resolveProjectRoot();
   const pythonPath = path.join(projectRoot, '.venv/bin/python');
   const configFile = path.join(projectRoot, configPath);
 
@@ -36,7 +37,7 @@ export async function runBankPricingScraper(
   }
 
   if (!(await pathExists(configFile))) {
-    throw new Error(`Scraper config not found: ${configPath}`);
+    throw new Error(`Scraper config not found: ${configFile}`);
   }
 
   const args = [
@@ -72,5 +73,16 @@ export async function runBankPricingScraper(
     );
   }
 
-  return bankPricingCatalogSchema.parse(parsed);
+  const catalog = bankPricingCatalogSchema.parse(parsed);
+  return filterCatalogByTopic(catalog, input.topic);
+}
+
+export async function runBothBankScrapers(
+  input: BankPricingToolInput = {},
+): Promise<{ arion: BankPricingCatalog; landsbankinn: BankPricingCatalog }> {
+  const [arion, landsbankinn] = await Promise.all([
+    runBankPricingScraper('scrapers/config.arion.json', input),
+    runBankPricingScraper('scrapers/config.landsbankinn.json', input),
+  ]);
+  return { arion, landsbankinn };
 }

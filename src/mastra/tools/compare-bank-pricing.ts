@@ -1,4 +1,5 @@
 import type { BankPricingCatalog, PricingItem, RateItem } from './bank-pricing-schemas';
+import { matchesTopic, normalizeText } from './topic-matching';
 
 export type ComparisonFocus = 'rates' | 'pricing' | 'all';
 
@@ -56,17 +57,9 @@ const STOP_WORDS = new Set([
   'the',
   'and',
   'for',
+  'kort',
+  'kredit',
 ]);
-
-function normalizeText(value: string): string {
-  return value
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 function tokenize(value: string): Set<string> {
   return new Set(
@@ -93,24 +86,8 @@ function matchScore(left: string, right: string): number {
   return overlap / Math.max(leftTokens.size, rightTokens.size);
 }
 
-function matchesTopic(text: string, topic: string): boolean {
-  const normalizedTopic = normalizeText(topic);
-  const normalizedText = normalizeText(text);
-  if (!normalizedTopic) {
-    return true;
-  }
-  if (normalizedText.includes(normalizedTopic)) {
-    return true;
-  }
-
-  const topicTokens = tokenize(topic);
-  const textTokens = tokenize(text);
-  for (const token of topicTokens) {
-    if (textTokens.has(token)) {
-      return true;
-    }
-  }
-  return false;
+function matchesTopicFilter(text: string, topic: string): boolean {
+  return matchesTopic(text, topic);
 }
 
 function latestDocumentTitle(
@@ -214,16 +191,20 @@ export function compareBankPricing(
 
   if (topic) {
     arionPricing = arionPricing.filter((item) =>
-      matchesTopic(item.description, topic),
+      matchesTopicFilter(item.description, topic),
     );
     landsbankinnPricing = landsbankinnPricing.filter((item) =>
-      matchesTopic(item.description, topic),
+      matchesTopicFilter(item.description, topic),
     );
     arionRates = arionRates.filter(
-      (item) => matchesTopic(item.product, topic) || matchesTopic(item.section, topic),
+      (item) =>
+        matchesTopicFilter(item.product, topic) ||
+        matchesTopicFilter(item.section, topic),
     );
     landsbankinnRates = landsbankinnRates.filter(
-      (item) => matchesTopic(item.product, topic) || matchesTopic(item.section, topic),
+      (item) =>
+        matchesTopicFilter(item.product, topic) ||
+        matchesTopicFilter(item.section, topic),
     );
   }
 

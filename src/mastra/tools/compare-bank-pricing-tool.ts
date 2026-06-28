@@ -1,8 +1,9 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { bankPricingCatalogSchema, pricingItemSchema, rateItemSchema } from './bank-pricing-schemas';
+import { pricingItemSchema, rateItemSchema } from './bank-pricing-schemas';
 import { compareBankPricing } from './compare-bank-pricing';
+import { runBothBankScrapers } from './run-bank-pricing-scraper';
 
 const sidePricingSchema = z
   .object({
@@ -23,19 +24,13 @@ const sideRateSchema = z
 export const compareBankPricingTool = createTool({
   id: 'compare-bank-pricing',
   description:
-    'Compare latest Arion and Landsbankinn pricing and interest rates. Pass catalogs from get-arion-pricing and get-landsbankinn-pricing, or omit them to fetch fresh data.',
+    'Compare latest Arion and Landsbankinn pricing and rates. Fetches both banks internally and returns a small structured comparison. Use this for any cross-bank comparison question.',
   inputSchema: z.object({
-    arion: bankPricingCatalogSchema
-      .optional()
-      .describe('Arion catalog from get-arion-pricing'),
-    landsbankinn: bankPricingCatalogSchema
-      .optional()
-      .describe('Landsbankinn catalog from get-landsbankinn-pricing'),
     topic: z
       .string()
       .optional()
       .describe(
-        'Optional filter, e.g. "íbúðalán", "kreditkort", "veltireikningur", "lántökugjald"',
+        'Product filter, e.g. "kreditkort", "íbúðalán", "veltireikningur", "lántökugjald"',
       ),
     focus: z
       .enum(['rates', 'pricing', 'all'])
@@ -88,18 +83,13 @@ export const compareBankPricingTool = createTool({
     landsbankinnOnlyRates: z.array(rateItemSchema),
   }),
   execute: async (inputData) => {
-    const { runBankPricingScraper } = await import('./run-bank-pricing-scraper');
-
-    const arion =
-      inputData.arion ??
-      (await runBankPricingScraper('scrapers/config.arion.json'));
-    const landsbankinn =
-      inputData.landsbankinn ??
-      (await runBankPricingScraper('scrapers/config.landsbankinn.json'));
+    const { arion, landsbankinn } = await runBothBankScrapers({
+      topic: inputData.topic,
+    });
 
     return compareBankPricing(arion, landsbankinn, {
       topic: inputData.topic,
-      focus: inputData.focus,
+      focus: inputData.focus ?? 'all',
     });
   },
 });

@@ -49,6 +49,12 @@ export const bankPricingToolInputSchema = z.object({
     .boolean()
     .optional()
     .describe('If true, only list PDF documents without parsing their contents'),
+  topic: z
+    .string()
+    .optional()
+    .describe(
+      'Filter results to items matching this topic, e.g. "kreditkort", "íbúðalán"',
+    ),
 });
 
 export type BankPricingToolInput = z.infer<typeof bankPricingToolInputSchema>;

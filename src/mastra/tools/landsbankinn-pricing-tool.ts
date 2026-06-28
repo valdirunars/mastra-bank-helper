@@ -9,7 +9,7 @@ import { runBankPricingScraper } from './run-bank-pricing-scraper';
 export const landsbankinnPricingTool = createTool({
   id: 'get-landsbankinn-pricing',
   description:
-    'Fetch Landsbankinn interest rates (vextir) and pricing (verðskrá) from landsbankinn.is. Returns PDF document links plus parsed fee and rate tables.',
+    'Fetch Landsbankinn pricing for a single bank. For cross-bank comparisons use compare-bank-pricing instead. Pass topic to filter results.',
   inputSchema: bankPricingToolInputSchema,
   outputSchema: bankPricingCatalogSchema,
   execute: async (inputData) => {
