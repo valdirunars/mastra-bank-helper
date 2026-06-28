@@ -13,7 +13,9 @@
     "scrape:quotes": ".venv/bin/python -m scrapers --scraper quotes",
     "scrape:config": ".venv/bin/python -m scrapers --config scrapers/config.example.json",
     "scrape:arion": ".venv/bin/python -m scrapers --config scrapers/config.arion.json",
-    "scrape:landsbankinn": ".venv/bin/python -m scrapers --config scrapers/config.landsbankinn.json"
+    "scrape:arion:en": ".venv/bin/python -m scrapers --config scrapers/config.arion.en.json",
+    "scrape:landsbankinn": ".venv/bin/python -m scrapers --config scrapers/config.landsbankinn.json",
+    "scrape:landsbankinn:en": ".venv/bin/python -m scrapers --config scrapers/config.landsbankinn.en.json"
   },
   "keywords": [],
   "author": "",

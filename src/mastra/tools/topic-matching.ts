@@ -1,4 +1,5 @@
 const TOPIC_ALIASES: Record<string, string[]> = {
+  einstaklingar: ['einstaklingar', 'einstakling', 'individuals', 'individual', 'retail'],
   kreditkort: ['kreditkort', 'kredit', 'credit card', 'visa', 'mastercard', 'kort'],
   ibudalan: ['ibudalan', 'ibudalán', 'housing loan', 'mortgage', 'fasteignalán'],
   veltireikningur: ['veltireikningur', 'veltureikningur', 'current account'],

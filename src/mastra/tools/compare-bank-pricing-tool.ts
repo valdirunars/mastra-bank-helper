@@ -1,8 +1,13 @@
 import { createTool } from '@mastra/core/tools';
 import { z } from 'zod';
 
-import { pricingItemSchema, rateItemSchema } from './bank-pricing-schemas';
+import {
+  bankPricingToolInputSchema,
+  pricingItemSchema,
+  rateItemSchema,
+} from './bank-pricing-schemas';
 import { compareBankPricing } from './compare-bank-pricing';
+import { resolveBankToolInput } from './resolve-bank-tool-input';
 import { runBothBankScrapers } from './run-bank-pricing-scraper';
 
 const sidePricingSchema = z
@@ -24,18 +29,16 @@ const sideRateSchema = z
 export const compareBankPricingTool = createTool({
   id: 'compare-bank-pricing',
   description:
-    'Compare latest Arion and Landsbankinn pricing and rates. Fetches both banks internally and returns a small structured comparison. Use this for any cross-bank comparison question.',
-  inputSchema: z.object({
-    topic: z
-      .string()
-      .optional()
-      .describe(
-        'Product filter, e.g. "kreditkort", "íbúðalán", "veltireikningur", "lántökugjald"',
-      ),
+    'Compare latest Arion and Landsbankinn pricing and rates. Fetches both banks internally and returns a small structured comparison. Pass language ("is" or "en") to pick Icelandic or English source PDFs.',
+  inputSchema: bankPricingToolInputSchema.extend({
     focus: z
       .enum(['rates', 'pricing', 'all'])
       .optional()
       .describe('Compare rates only, pricing/fees only, or both'),
+    audience: z
+      .enum(['individuals', 'business', 'all'])
+      .optional()
+      .describe('Filter to retail or business pricing where possible'),
   }),
   outputSchema: z.object({
     comparedAt: z.string(),
@@ -81,15 +84,17 @@ export const compareBankPricingTool = createTool({
     landsbankinnOnlyPricing: z.array(pricingItemSchema),
     arionOnlyRates: z.array(rateItemSchema),
     landsbankinnOnlyRates: z.array(rateItemSchema),
+    summaryText: z.string(),
   }),
-  execute: async (inputData) => {
-    const { arion, landsbankinn } = await runBothBankScrapers({
-      topic: inputData.topic,
-    });
+  execute: async (inputData, context) => {
+    const resolved = resolveBankToolInput(inputData, context);
+    const { arion, landsbankinn } = await runBothBankScrapers(resolved);
 
     return compareBankPricing(arion, landsbankinn, {
-      topic: inputData.topic,
-      focus: inputData.focus ?? 'all',
+      topic: resolved.topic,
+      focus: resolved.focus ?? 'all',
+      audience: resolved.audience ?? 'individuals',
+      language: resolved.language,
     });
   },
 });

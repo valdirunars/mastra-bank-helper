@@ -1,0 +1,118 @@
+{
+  "name": "arion-en",
+  "url": "https://www.arionbanki.is/en/bank/data/rates",
+  "schema": {
+    "BankPricingCatalog": {
+      "bank": "string",
+      "source_url": "string",
+      "documents": "PricingDocument[]",
+      "pricing_items": "PricingItem[]",
+      "rate_items": "RateItem[]"
+    },
+    "PricingDocument": {
+      "title": "string",
+      "url": "string",
+      "category": "string",
+      "document_type": "rates | pricing | account_fees | rate_history | other",
+      "effective_date": "string | null",
+      "subtitle": "string | null"
+    },
+    "PricingItem": {
+      "code": "string",
+      "description": "string",
+      "amount": "string",
+      "unit": "percent | isk | range | text",
+      "document_title": "string",
+      "document_url": "string",
+      "category": "string"
+    },
+    "RateItem": {
+      "section": "string",
+      "product": "string",
+      "rate": "string",
+      "document_title": "string",
+      "document_url": "string",
+      "category": "string"
+    }
+  },
+  "page": {
+    "wait_for": {
+      "selector": "section a[href*='.pdf']",
+      "by": "css"
+    },
+    "wait_timeout": 20,
+    "page_load_timeout": 60,
+    "documents": {
+      "type": "list",
+      "by": "css",
+      "item_selector": "section a[href*='.pdf']",
+      "fields": {
+        "title": {
+          "source": "text"
+        },
+        "url": {
+          "source": "attribute",
+          "attribute": "href"
+        },
+        "subtitle": {
+          "source": "constant",
+          "value": null
+        },
+        "category": {
+          "source": "derived",
+          "from": "url",
+          "rules": [
+            { "match": "/EN-Vextir/", "value": "vextir" },
+            { "match": "/EN-Verdskra/", "value": "verdskra" },
+            { "match": "Legal%20entities", "value": "greidslureikningar" },
+            { "match": "Verdskra-VL-EN", "value": "greidslureikningar" },
+            { "match": "/PL-Verdskra/", "value": "greinar" },
+            { "match": "", "value": "other" }
+          ]
+        },
+        "document_type": {
+          "source": "derived",
+          "from": "url",
+          "rules": [
+            { "match": "/EN-Vextir/", "value": "rates" },
+            { "match": "/EN-Verdskra/", "value": "pricing" },
+            { "match": "Legal%20entities", "value": "account_fees" },
+            { "match": "Verdskra-VL-EN", "value": "account_fees" },
+            { "match": "/PL-Verdskra/", "value": "other" },
+            { "match": "", "value": "other" }
+          ]
+        },
+        "effective_date": {
+          "source": "constant",
+          "value": null
+        }
+      }
+    }
+  },
+  "pdf": {
+    "enabled": true,
+    "download_document_types": ["pricing", "rates", "account_fees"],
+    "parser_by_document_type": {
+      "pricing": "numbered_pricing",
+      "account_fees": "numbered_pricing",
+      "rates": "rate_lines"
+    },
+    "parsers": {
+      "numbered_pricing": {
+        "type": "numbered_pricing",
+        "description": "Parses numbered fee lines from English verðskrá PDFs"
+      },
+      "rate_lines": {
+        "type": "rate_lines",
+        "description": "Parses product lines ending with percentage rates"
+      }
+    },
+    "document_type_map": {
+      "vextir": "rates",
+      "verdskra": "pricing",
+      "greidslureikningar": "account_fees",
+      "throun_vaxta": "rate_history",
+      "greinar": "other"
+    }
+  }
+}

@@ -1,7 +1,10 @@
 import type { BankPricingCatalog, PricingItem, RateItem } from './bank-pricing-schemas';
 import { matchesTopic, normalizeText } from './topic-matching';
 
+import type { ScraperLocale } from './scraper-config';
+
 export type ComparisonFocus = 'rates' | 'pricing' | 'all';
+export type ComparisonAudience = 'individuals' | 'business' | 'all';
 
 export interface PricingComparisonRow {
   topic: string;
@@ -21,6 +24,7 @@ export interface BankPricingComparison {
   comparedAt: string;
   focus: ComparisonFocus;
   topic: string | null;
+  audience?: ComparisonAudience;
   sources: {
     arion: { url: string; pricingDocument: string | null; ratesDocument: string | null };
     landsbankinn: {
@@ -43,6 +47,7 @@ export interface BankPricingComparison {
   landsbankinnOnlyPricing: PricingItem[];
   arionOnlyRates: RateItem[];
   landsbankinnOnlyRates: RateItem[];
+  summaryText: string;
 }
 
 const STOP_WORDS = new Set([
@@ -165,13 +170,126 @@ function pairItems<T extends { description?: string; product?: string }>(
   return { pairs, arionOnly, landsbankinnOnly };
 }
 
+function matchesAudience(text: string, audience: ComparisonAudience): boolean {
+  if (audience === 'all') {
+    return true;
+  }
+
+  const normalized = normalizeText(text);
+  const individualTerms = [
+    'einstakling',
+    'neytend',
+    'almennt kreditkort',
+    'einkareikning',
+    'individual',
+    'retail',
+    'personal',
+  ];
+  const businessTerms = [
+    'fyrirtæk',
+    'lóg aðila',
+    'logadila',
+    'viðskipta',
+    'business',
+    'corporate',
+    'legal entit',
+  ];
+
+  if (audience === 'individuals') {
+    return !businessTerms.some((term) => normalized.includes(term));
+  }
+
+  return businessTerms.some((term) => normalized.includes(term));
+}
+
+function formatComparisonSummary(
+  comparison: Omit<BankPricingComparison, 'summaryText'>,
+  language: ScraperLocale = 'is',
+): string {
+  const topicLabel = comparison.topic ?? (language === 'en' ? 'general pricing' : 'almenn verðlagning');
+  const audienceLabel =
+    comparison.audience === 'business'
+      ? language === 'en'
+        ? 'business'
+        : 'fyrirtæki'
+      : comparison.audience === 'all'
+        ? language === 'en'
+          ? 'all customers'
+          : 'allir'
+        : language === 'en'
+          ? 'individuals'
+          : 'einstaklingar';
+
+  const lines = [
+    language === 'en'
+      ? `Comparison: ${topicLabel} (${comparison.focus}, ${audienceLabel})`
+      : `Samanburður: ${topicLabel} (${comparison.focus}, ${audienceLabel})`,
+    '',
+  ];
+
+  if (comparison.pricingComparisons.length > 0) {
+    lines.push(language === 'en' ? 'Matched fees/charges:' : 'Samsvarandi gjöld:');
+    for (const row of comparison.pricingComparisons.slice(0, 10)) {
+      lines.push(
+        `- ${row.topic}: Arion ${row.arion?.amount ?? 'n/a'} vs Landsbankinn ${row.landsbankinn?.amount ?? 'n/a'}`,
+      );
+    }
+    lines.push('');
+  }
+
+  if (comparison.rateComparisons.length > 0) {
+    lines.push(language === 'en' ? 'Matched rates:' : 'Samsvarandi vextir:');
+    for (const row of comparison.rateComparisons.slice(0, 10)) {
+      lines.push(
+        `- ${row.topic}: Arion ${row.arion?.rate ?? 'n/a'} vs Landsbankinn ${row.landsbankinn?.rate ?? 'n/a'}`,
+      );
+    }
+    lines.push('');
+  }
+
+  if (comparison.arionOnlyPricing.length > 0) {
+    lines.push(language === 'en' ? 'Arion-only fees (sample):' : 'Gjöld eingöngu hjá Arion (dæmi):');
+    for (const item of comparison.arionOnlyPricing.slice(0, 5)) {
+      lines.push(`- ${item.description}: ${item.amount}`);
+    }
+    lines.push('');
+  }
+
+  if (comparison.landsbankinnOnlyPricing.length > 0) {
+    lines.push(
+      language === 'en'
+        ? 'Landsbankinn-only fees (sample):'
+        : 'Gjöld eingöngu hjá Landsbankinn (dæmi):',
+    );
+    for (const item of comparison.landsbankinnOnlyPricing.slice(0, 5)) {
+      lines.push(`- ${item.description}: ${item.amount}`);
+    }
+    lines.push('');
+  }
+
+  lines.push(
+    language === 'en'
+      ? `Sources: Arion ${comparison.sources.arion.pricingDocument ?? comparison.sources.arion.ratesDocument ?? 'PDF'}; Landsbankinn ${comparison.sources.landsbankinn.pricingDocument ?? comparison.sources.landsbankinn.ratesDocument ?? 'PDF'}.`
+      : `Heimildir: Arion ${comparison.sources.arion.pricingDocument ?? comparison.sources.arion.ratesDocument ?? 'PDF'}; Landsbankinn ${comparison.sources.landsbankinn.pricingDocument ?? comparison.sources.landsbankinn.ratesDocument ?? 'PDF'}.`,
+  );
+
+  return lines.join('\n');
+}
+
 export function compareBankPricing(
   arion: BankPricingCatalog,
   landsbankinn: BankPricingCatalog,
-  options: { topic?: string; focus?: ComparisonFocus } = {},
+  options: {
+    topic?: string;
+    focus?: ComparisonFocus;
+    audience?: ComparisonAudience;
+    language?: ScraperLocale;
+  } = {},
 ): BankPricingComparison {
   const focus = options.focus ?? 'all';
   const topic = options.topic?.trim() || null;
+  const audience = options.audience ?? 'all';
+  const language = options.language ?? 'is';
 
   const arionPricingDoc = latestDocumentTitle(arion, 'pricing');
   const landsbankinnPricingDoc = latestDocumentTitle(landsbankinn, 'pricing');
@@ -208,6 +326,25 @@ export function compareBankPricing(
     );
   }
 
+  if (audience !== 'all') {
+    arionPricing = arionPricing.filter((item) =>
+      matchesAudience(item.description, audience),
+    );
+    landsbankinnPricing = landsbankinnPricing.filter((item) =>
+      matchesAudience(item.description, audience),
+    );
+    arionRates = arionRates.filter(
+      (item) =>
+        matchesAudience(item.product, audience) ||
+        matchesAudience(item.section, audience),
+    );
+    landsbankinnRates = landsbankinnRates.filter(
+      (item) =>
+        matchesAudience(item.product, audience) ||
+        matchesAudience(item.section, audience),
+    );
+  }
+
   const pricingPairs =
     focus === 'rates'
       ? { pairs: [], arionOnly: arionPricing, landsbankinnOnly: landsbankinnPricing }
@@ -222,10 +359,41 @@ export function compareBankPricing(
       ? { pairs: [], arionOnly: arionRates, landsbankinnOnly: landsbankinnRates }
       : pairItems(arionRates, landsbankinnRates, (item) => item.product ?? '');
 
-  return {
+  return buildComparisonResult(
+    arion,
+    landsbankinn,
+    focus,
+    topic,
+    audience,
+    arionPricingDoc,
+    landsbankinnPricingDoc,
+    arionRatesDoc,
+    landsbankinnRatesDoc,
+    pricingPairs,
+    ratePairs,
+    language,
+  );
+}
+
+function buildComparisonResult(
+  arion: BankPricingCatalog,
+  landsbankinn: BankPricingCatalog,
+  focus: ComparisonFocus,
+  topic: string | null,
+  audience: ComparisonAudience,
+  arionPricingDoc: string | null,
+  landsbankinnPricingDoc: string | null,
+  arionRatesDoc: string | null,
+  landsbankinnRatesDoc: string | null,
+  pricingPairs: ReturnType<typeof pairItems<PricingItem>>,
+  ratePairs: ReturnType<typeof pairItems<RateItem>>,
+  language: ScraperLocale,
+): BankPricingComparison {
+  const comparisonWithoutSummary = {
     comparedAt: new Date().toISOString(),
     focus,
     topic,
+    audience,
     sources: {
       arion: {
         url: arion.source_url,
@@ -284,5 +452,10 @@ export function compareBankPricing(
     landsbankinnOnlyPricing: pricingPairs.landsbankinnOnly.slice(0, 25),
     arionOnlyRates: ratePairs.arionOnly.slice(0, 25),
     landsbankinnOnlyRates: ratePairs.landsbankinnOnly.slice(0, 25),
+  };
+
+  return {
+    ...comparisonWithoutSummary,
+    summaryText: formatComparisonSummary(comparisonWithoutSummary, language),
   };
 }

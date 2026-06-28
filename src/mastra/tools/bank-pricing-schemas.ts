@@ -43,8 +43,17 @@ export const bankPricingCatalogSchema = z.object({
 });
 
 export type BankPricingCatalog = z.infer<typeof bankPricingCatalogSchema>;
+export type PricingItem = z.infer<typeof pricingItemSchema>;
+export type RateItem = z.infer<typeof rateItemSchema>;
+
+export const scraperLanguageSchema = z
+  .enum(['is', 'en'])
+  .describe(
+    'Scraper language: "is" for Icelandic PDFs, "en" for English PDFs. Match the user language when possible.',
+  );
 
 export const bankPricingToolInputSchema = z.object({
+  language: scraperLanguageSchema.optional(),
   documentsOnly: z
     .boolean()
     .optional()
@@ -53,7 +62,7 @@ export const bankPricingToolInputSchema = z.object({
     .string()
     .optional()
     .describe(
-      'Filter results to items matching this topic, e.g. "kreditkort", "íbúðalán"',
+      'Filter results to items matching this topic, e.g. "kreditkort", "íbúðalán", "credit card", "mortgage"',
     ),
 });
 

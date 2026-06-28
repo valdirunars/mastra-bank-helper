@@ -81,7 +81,7 @@ def _extract_json_field(item: dict[str, Any], spec: dict[str, Any]) -> Any:
 
     transform = spec.get("transform")
     if transform == "extract_effective_date" and isinstance(value, str):
-        match = re.search(r"Gildir frá\s+(.+)$", value, re.I)
+        match = re.search(r"(?:Gildir frá|Valid from)\s+(.+)$", value, re.I)
         return match.group(1).strip() if match else value
     if transform == "trim":
         return value.strip() if isinstance(value, str) else value

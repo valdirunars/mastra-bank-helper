@@ -10,6 +10,7 @@ import {
 } from './bank-pricing-schemas';
 import { filterCatalogByTopic } from './filter-catalog';
 import { resolveProjectRoot } from './project-root';
+import { getScraperConfigPath, type ScraperBank } from './scraper-config';
 
 const execFileAsync = promisify(execFile);
 
@@ -81,8 +82,18 @@ export async function runBothBankScrapers(
   input: BankPricingToolInput = {},
 ): Promise<{ arion: BankPricingCatalog; landsbankinn: BankPricingCatalog }> {
   const [arion, landsbankinn] = await Promise.all([
-    runBankPricingScraper('scrapers/config.arion.json', input),
-    runBankPricingScraper('scrapers/config.landsbankinn.json', input),
+    runBankPricingScraper(getScraperConfigPath('arion', input.language), input),
+    runBankPricingScraper(
+      getScraperConfigPath('landsbankinn', input.language),
+      input,
+    ),
   ]);
   return { arion, landsbankinn };
+}
+
+export function runBankScraperFor(
+  bank: ScraperBank,
+  input: BankPricingToolInput = {},
+): Promise<BankPricingCatalog> {
+  return runBankPricingScraper(getScraperConfigPath(bank, input.language), input);
 }

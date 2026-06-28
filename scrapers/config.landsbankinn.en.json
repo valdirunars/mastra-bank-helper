@@ -1,0 +1,109 @@
+{
+  "name": "landsbankinn-en",
+  "url": "https://www.landsbankinn.is/en/interest-rates-and-fees",
+  "schema": {
+    "BankPricingCatalog": {
+      "bank": "string",
+      "source_url": "string",
+      "documents": "PricingDocument[]",
+      "pricing_items": "PricingItem[]",
+      "rate_items": "RateItem[]"
+    },
+    "PricingDocument": {
+      "title": "string",
+      "url": "string",
+      "category": "string",
+      "document_type": "rates | pricing | rate_history | other",
+      "effective_date": "string | null",
+      "subtitle": "string | null"
+    },
+    "PricingItem": {
+      "code": "string",
+      "description": "string",
+      "amount": "string",
+      "unit": "percent | isk | range | text",
+      "document_title": "string",
+      "document_url": "string",
+      "category": "string"
+    },
+    "RateItem": {
+      "section": "string",
+      "product": "string",
+      "rate": "string",
+      "document_title": "string",
+      "document_url": "string",
+      "category": "string"
+    }
+  },
+  "page": {
+    "wait_for": {
+      "selector": "#__NEXT_DATA__",
+      "by": "css"
+    },
+    "wait_timeout": 20,
+    "page_load_timeout": 60,
+    "documents": {
+      "type": "embedded_json",
+      "script_selector": "#__NEXT_DATA__",
+      "typename": "PageBodyText_with_pointsFields",
+      "fields": {
+        "title": {
+          "json_path": "label.0.text",
+          "transform": "trim"
+        },
+        "subtitle": {
+          "json_path": "item.0.text",
+          "transform": "trim"
+        },
+        "url": {
+          "json_path": "point_link.url"
+        },
+        "effective_date": {
+          "json_path": "item.0.text",
+          "transform": "extract_effective_date"
+        },
+        "category": {
+          "source": "derived",
+          "from": "url",
+          "rules": [
+            { "match": "/uploads/documents/vextir/", "value": "vextir" },
+            { "match": "/uploads/documents/verdskra/", "value": "verdskra" },
+            { "match": "", "value": "other" }
+          ]
+        },
+        "document_type": {
+          "source": "derived",
+          "from": "url",
+          "rules": [
+            { "match": "vaxtaakvordun", "value": "rates" },
+            { "match": "/uploads/documents/vextir/", "value": "rate_history" },
+            { "match": "/uploads/documents/verdskra/", "value": "pricing" },
+            { "match": "", "value": "other" }
+          ]
+        }
+      }
+    }
+  },
+  "pdf": {
+    "enabled": true,
+    "download_document_types": ["pricing", "rates"],
+    "parser_by_document_type": {
+      "pricing": "numbered_pricing",
+      "rates": "rate_lines"
+    },
+    "parsers": {
+      "numbered_pricing": {
+        "type": "numbered_pricing",
+        "description": "Parses numbered fee lines from English verðskrá PDFs"
+      },
+      "rate_lines": {
+        "type": "rate_lines",
+        "description": "Parses interest rate table lines from English PDF text"
+      }
+    },
+    "document_type_map": {
+      "vextir": "rates",
+      "verdskra": "pricing"
+    }
+  }
+}
