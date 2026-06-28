@@ -1,4 +1,7 @@
 output.txt
+__pycache__/
+*.py[cod]
+.venv/
 node_modules
 dist
 .mastra

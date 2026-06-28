@@ -1,0 +1,22 @@
+{
+  "url": "https://quotes.toscrape.com/",
+  "wait_for": {
+    "selector": "div.quote",
+    "by": "css"
+  },
+  "fields": {
+    "quote_text": {
+      "selector": "div.quote span.text",
+      "by": "css"
+    },
+    "author": {
+      "selector": "div.quote small.author",
+      "by": "css"
+    },
+    "tags": {
+      "selector": "div.quote:first-of-type div.tags a.tag",
+      "by": "css",
+      "multiple": true
+    }
+  }
+}

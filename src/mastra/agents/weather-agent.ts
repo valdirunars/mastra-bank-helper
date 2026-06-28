@@ -1,12 +1,15 @@
-import { Agent } from '@mastra/core/agent';
-import { Memory } from '@mastra/memory';
-import { weatherTool } from '../tools/weather-tool';
-import { scorers } from '../scorers/weather-scorer';
+import { Agent } from "@mastra/core/agent";
+import { Memory } from "@mastra/memory";
+import { weatherTool } from "../tools/weather-tool";
+import { scorers } from "../scorers/weather-scorer";
+
+// 1. Import the correct, modern Ollama provider
+import { ollama } from "ai-sdk-ollama";
 
 export const weatherAgent = new Agent({
-  id: 'weather-agent',
-  name: 'Weather Agent',
-  instructions: `You are a helpful weather assistant that provides accurate weather information and can help planning activities based on the weather.
+  id: "weather-agent",
+  name: "Weather Agent",
+  instructions: `You are a helpful weather assistant that provides accurate weather information and can help planning activities based on the weather. Do not use chain-of-thought tags.
 
 Your primary function is to help users get weather details for specific locations. When responding:
 - Always ask for a location if none is provided
@@ -18,29 +21,23 @@ Your primary function is to help users get weather details for specific location
 - If the user asks for activities, respond in the format they request.
 
 Use the weatherTool to fetch current weather data.`,
-  model: 'google/gemini-2.5-pro',
+
+  // 2. Bind the model using the native community wrapper directly
+  model: ollama("qwen3:latest"),
+
   tools: { weatherTool },
   scorers: {
     toolCallAppropriateness: {
       scorer: scorers.toolCallAppropriatenessScorer,
-      sampling: {
-        type: 'ratio',
-        rate: 1,
-      },
+      sampling: { type: "ratio", rate: 1 },
     },
     completeness: {
       scorer: scorers.completenessScorer,
-      sampling: {
-        type: 'ratio',
-        rate: 1,
-      },
+      sampling: { type: "ratio", rate: 1 },
     },
     translation: {
       scorer: scorers.translationScorer,
-      sampling: {
-        type: 'ratio',
-        rate: 1,
-      },
+      sampling: { type: "ratio", rate: 1 },
     },
   },
   memory: new Memory(),
