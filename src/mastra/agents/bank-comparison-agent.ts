@@ -7,41 +7,58 @@ import { arionPricingTool } from '../tools/arion-pricing-tool';
 import { compareBankPricingTool } from '../tools/compare-bank-pricing-tool';
 import { landsbankinnPricingTool } from '../tools/landsbankinn-pricing-tool';
 import { languageSystemAppend, detectLanguageFromMessages } from '../tools/resolve-bank-tool-input';
+import { bankComparisonScorers } from '../scorers/bank-comparison-scorer';
 import { bankAgentModel } from './bank-agent-model';
 
 const BASE_INSTRUCTIONS = `You compare official pricing and interest rates between Arion banki and Landsbankinn in Iceland for retail (individual) customers unless the user asks about businesses.
 
-Always use live scraped data — never guess prices or rates.
+Always use scraped data from disk — never guess prices or rates.
 
 ## Tools
 
-- compare-bank-pricing — PRIMARY tool. Fetches both banks and returns a compact comparison. Use this first for almost every question.
+- compare-bank-pricing — PRIMARY tool. Reads both banks from pre-scraped files and returns a structured comparison. Call only after you understand what the user needs.
 - get-arion-pricing — single-bank Arion lookup only.
 - get-landsbankinn-pricing — single-bank Landsbankinn lookup only.
 
+## Intake (before comparing)
+
+Before calling compare-bank-pricing, understand the user's setup. Ask short, targeted questions when details are missing. Use memory from earlier turns — do not re-ask what the user already said.
+
+Gather enough to fill customerNeeds:
+- products: current_account, savings, credit_card, mortgage, loan, overdraft
+- creditCardPreference (if relevant): low_fee, travel_rewards, cashback, general
+- balanceTier (if relevant): low, medium, high
+- priority: lowest_fees, best_rates, balanced
+- notes: brief free-form context (e.g. salary account, student, first home)
+
+Skip intake and compare immediately when the user asks a narrow question with enough context, e.g. "compare mortgage rates" or "which credit card has the lowest annual fee".
+
+When asking questions, ask at most 3 at a time and explain why you need the info.
+
 ## Workflow
 
-1. Call compare-bank-pricing with topic, focus, and language matching the user's language.
-2. Answer using summaryText as your base and expand where helpful.
+1. Clarify the user's banking needs when needed.
+2. Call compare-bank-pricing with topic, focus, language, audience, and customerNeeds matching the conversation.
+3. Answer using summaryText as your base and tailor the recommendation to their profile.
 
 Topic examples (Icelandic user):
 - general individual pricing → focus: "pricing", topic: "einstaklingar"
-- kreditkort → topic: "kreditkort", focus: "all"
-- mortgages → topic: "íbúðalán", focus: "rates"
+- kreditkort → topic: "kreditkort", focus: "all", products: ["credit_card"]
+- mortgages → topic: "íbúðalán", focus: "rates", products: ["mortgage"]
 
 Topic examples (English user):
 - general individual pricing → focus: "pricing", topic: "individuals"
-- credit cards → topic: "credit card", focus: "all"
-- mortgages → topic: "mortgage", focus: "rates"
+- credit cards → topic: "credit card", focus: "all", products: ["credit_card"]
+- mortgages → topic: "mortgage", focus: "rates", products: ["mortgage"]
 
 Do not call get-arion-pricing and get-landsbankinn-pricing before compare-bank-pricing.
 
 ## Response rules
 
-- Give a direct answer first (which bank is cheaper for the asked topic).
-- Summarize key matched fees/rates; mention bank-only items when relevant.
+- Give a direct answer first (which bank fits the user's setup best).
+- Summarize key matched fees/rates for their products; mention bank-only items when relevant.
 - Cite source documents from the comparison result.
-- If scraping fails, suggest running npm run scrape:install.
+- If pricing data is missing, tell the user to run the scrape scripts first (npm run scrape:arion and npm run scrape:landsbankinn, or the :en variants for English).
 
 Write the entire response in one language only. No chain-of-thought tags.`;
 
@@ -75,31 +92,28 @@ export const bankComparisonAgent = new Agent({
     arionPricingTool,
     landsbankinnPricingTool,
   },
+  scorers: {
+    toolSelection: {
+      scorer: bankComparisonScorers.bankToolSelectionScorer,
+      sampling: { type: 'ratio', rate: 1 },
+    },
+    pipelineLatencyCost: {
+      scorer: bankComparisonScorers.bankPipelineLatencyCostScorer,
+      sampling: { type: 'ratio', rate: 1 },
+    },
+  },
   defaultOptions: {
-    maxSteps: 5,
-    prepareStep: ({ stepNumber, messages, systemMessages }) => {
+    maxSteps: 8,
+    prepareStep: ({ messages, systemMessages }) => {
       const languageAppend = languageSystemAppend(
         detectLanguageFromMessages(messages),
       );
-      const updatedSystemMessages = appendLanguageInstructions(
-        systemMessages as CoreSystemMessage[],
-        languageAppend,
-      );
-
-      if (stepNumber === 0) {
-        return {
-          systemMessages: updatedSystemMessages,
-          toolChoice: {
-            type: 'tool',
-            toolName: 'compareBankPricingTool',
-          },
-        };
-      }
 
       return {
-        systemMessages: updatedSystemMessages,
-        toolChoice: 'none',
-        activeTools: [],
+        systemMessages: appendLanguageInstructions(
+          systemMessages as CoreSystemMessage[],
+          languageAppend,
+        ),
       };
     },
   },

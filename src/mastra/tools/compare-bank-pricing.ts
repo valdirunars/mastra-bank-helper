@@ -1,4 +1,11 @@
-import type { BankPricingCatalog, PricingItem, RateItem } from './bank-pricing-schemas';
+import type { BankPricingCatalog, PricingItem, RateItem, CustomerNeeds } from './bank-pricing-schemas';
+import {
+  formatCustomerNeedsSummary,
+  matchesCreditCardPreference,
+  matchesProductNeeds,
+  resolveFocusFromNeeds,
+  resolveTopicFromNeeds,
+} from './customer-needs';
 import { matchesTopic, normalizeText } from './topic-matching';
 
 import type { ScraperLocale } from './scraper-config';
@@ -25,6 +32,7 @@ export interface BankPricingComparison {
   focus: ComparisonFocus;
   topic: string | null;
   audience?: ComparisonAudience;
+  customerNeeds?: CustomerNeeds;
   sources: {
     arion: { url: string; pricingDocument: string | null; ratesDocument: string | null };
     landsbankinn: {
@@ -207,6 +215,7 @@ function formatComparisonSummary(
   language: ScraperLocale = 'is',
 ): string {
   const topicLabel = comparison.topic ?? (language === 'en' ? 'general pricing' : 'almenn verðlagning');
+  const profileSummary = formatCustomerNeedsSummary(comparison.customerNeeds, language);
   const audienceLabel =
     comparison.audience === 'business'
       ? language === 'en'
@@ -224,8 +233,17 @@ function formatComparisonSummary(
     language === 'en'
       ? `Comparison: ${topicLabel} (${comparison.focus}, ${audienceLabel})`
       : `Samanburður: ${topicLabel} (${comparison.focus}, ${audienceLabel})`,
-    '',
   ];
+
+  if (profileSummary) {
+    lines.push(
+      language === 'en'
+        ? `Customer profile: ${profileSummary}`
+        : `Notandi: ${profileSummary}`,
+    );
+  }
+
+  lines.push('');
 
   if (comparison.pricingComparisons.length > 0) {
     lines.push(language === 'en' ? 'Matched fees/charges:' : 'Samsvarandi gjöld:');
@@ -284,11 +302,13 @@ export function compareBankPricing(
     focus?: ComparisonFocus;
     audience?: ComparisonAudience;
     language?: ScraperLocale;
+    customerNeeds?: CustomerNeeds;
   } = {},
 ): BankPricingComparison {
-  const focus = options.focus ?? 'all';
-  const topic = options.topic?.trim() || null;
-  const audience = options.audience ?? 'all';
+  const customerNeeds = options.customerNeeds;
+  const focus = resolveFocusFromNeeds(options.focus, customerNeeds);
+  const topic = resolveTopicFromNeeds(options.topic, customerNeeds);
+  const audience = options.audience ?? 'individuals';
   const language = options.language ?? 'is';
 
   const arionPricingDoc = latestDocumentTitle(arion, 'pricing');
@@ -323,6 +343,42 @@ export function compareBankPricing(
       (item) =>
         matchesTopicFilter(item.product, topic) ||
         matchesTopicFilter(item.section, topic),
+    );
+  } else if (customerNeeds?.products?.length) {
+    arionPricing = arionPricing.filter((item) =>
+      matchesProductNeeds(item.description, customerNeeds),
+    );
+    landsbankinnPricing = landsbankinnPricing.filter((item) =>
+      matchesProductNeeds(item.description, customerNeeds),
+    );
+    arionRates = arionRates.filter(
+      (item) =>
+        matchesProductNeeds(item.product, customerNeeds) ||
+        matchesProductNeeds(item.section, customerNeeds),
+    );
+    landsbankinnRates = landsbankinnRates.filter(
+      (item) =>
+        matchesProductNeeds(item.product, customerNeeds) ||
+        matchesProductNeeds(item.section, customerNeeds),
+    );
+  }
+
+  if (customerNeeds) {
+    arionPricing = arionPricing.filter((item) =>
+      matchesCreditCardPreference(item.description, customerNeeds),
+    );
+    landsbankinnPricing = landsbankinnPricing.filter((item) =>
+      matchesCreditCardPreference(item.description, customerNeeds),
+    );
+    arionRates = arionRates.filter(
+      (item) =>
+        matchesCreditCardPreference(item.product, customerNeeds) ||
+        matchesCreditCardPreference(item.section, customerNeeds),
+    );
+    landsbankinnRates = landsbankinnRates.filter(
+      (item) =>
+        matchesCreditCardPreference(item.product, customerNeeds) ||
+        matchesCreditCardPreference(item.section, customerNeeds),
     );
   }
 
@@ -365,6 +421,7 @@ export function compareBankPricing(
     focus,
     topic,
     audience,
+    customerNeeds,
     arionPricingDoc,
     landsbankinnPricingDoc,
     arionRatesDoc,
@@ -381,6 +438,7 @@ function buildComparisonResult(
   focus: ComparisonFocus,
   topic: string | null,
   audience: ComparisonAudience,
+  customerNeeds: CustomerNeeds | undefined,
   arionPricingDoc: string | null,
   landsbankinnPricingDoc: string | null,
   arionRatesDoc: string | null,
@@ -394,6 +452,7 @@ function buildComparisonResult(
     focus,
     topic,
     audience,
+    customerNeeds,
     sources: {
       arion: {
         url: arion.source_url,

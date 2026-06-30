@@ -79,6 +79,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="For bank pipeline configs, skip PDF download and parsing",
     )
+    parser.add_argument(
+        "--output-file",
+        type=Path,
+        help="Write JSON result to this file instead of stdout",
+    )
     return parser
 
 
@@ -120,9 +125,15 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("Provide --scraper or --config to define field selectors")
 
     if args.output == "json":
-        print(json.dumps(result, ensure_ascii=False))
+        payload = json.dumps(result, ensure_ascii=False)
     else:
-        print(json.dumps(result, indent=2, ensure_ascii=False))
+        payload = json.dumps(result, indent=2, ensure_ascii=False)
+
+    if args.output_file:
+        args.output_file.parent.mkdir(parents=True, exist_ok=True)
+        args.output_file.write_text(payload, encoding="utf-8")
+    else:
+        print(payload)
 
     return 0
 

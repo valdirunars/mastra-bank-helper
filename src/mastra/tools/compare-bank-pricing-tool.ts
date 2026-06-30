@@ -3,12 +3,13 @@ import { z } from 'zod';
 
 import {
   bankPricingToolInputSchema,
+  customerNeedsSchema,
   pricingItemSchema,
   rateItemSchema,
 } from './bank-pricing-schemas';
 import { compareBankPricing } from './compare-bank-pricing';
 import { resolveBankToolInput } from './resolve-bank-tool-input';
-import { runBothBankScrapers } from './run-bank-pricing-scraper';
+import { readBothBankPricing } from './read-bank-pricing';
 
 const sidePricingSchema = z
   .object({
@@ -29,7 +30,7 @@ const sideRateSchema = z
 export const compareBankPricingTool = createTool({
   id: 'compare-bank-pricing',
   description:
-    'Compare latest Arion and Landsbankinn pricing and rates. Fetches both banks internally and returns a small structured comparison. Pass language ("is" or "en") to pick Icelandic or English source PDFs.',
+    'Compare latest Arion and Landsbankinn pricing and rates from pre-scraped data on disk. Returns a structured comparison. Pass customerNeeds with products and preferences gathered from the conversation. Pass language ("is" or "en") to pick Icelandic or English source files. Requires running npm run scrape:arion and npm run scrape:landsbankinn first.',
   inputSchema: bankPricingToolInputSchema.extend({
     focus: z
       .enum(['rates', 'pricing', 'all'])
@@ -39,6 +40,11 @@ export const compareBankPricingTool = createTool({
       .enum(['individuals', 'business', 'all'])
       .optional()
       .describe('Filter to retail or business pricing where possible'),
+    customerNeeds: customerNeedsSchema
+      .optional()
+      .describe(
+        'Structured summary of what the user needs: products, credit card preference, balance tier, and priority',
+      ),
   }),
   outputSchema: z.object({
     comparedAt: z.string(),
@@ -88,13 +94,14 @@ export const compareBankPricingTool = createTool({
   }),
   execute: async (inputData, context) => {
     const resolved = resolveBankToolInput(inputData, context);
-    const { arion, landsbankinn } = await runBothBankScrapers(resolved);
+    const { arion, landsbankinn } = await readBothBankPricing(resolved);
 
     return compareBankPricing(arion, landsbankinn, {
       topic: resolved.topic,
       focus: resolved.focus ?? 'all',
       audience: resolved.audience ?? 'individuals',
       language: resolved.language,
+      customerNeeds: resolved.customerNeeds,
     });
   },
 });

@@ -67,3 +67,50 @@ export const bankPricingToolInputSchema = z.object({
 });
 
 export type BankPricingToolInput = z.infer<typeof bankPricingToolInputSchema>;
+
+export const bankingProductSchema = z.enum([
+  'current_account',
+  'savings',
+  'credit_card',
+  'mortgage',
+  'loan',
+  'overdraft',
+]);
+
+export const creditCardPreferenceSchema = z.enum([
+  'low_fee',
+  'travel_rewards',
+  'cashback',
+  'general',
+]);
+
+export const balanceTierSchema = z.enum(['low', 'medium', 'high']);
+
+export const comparisonPrioritySchema = z.enum([
+  'lowest_fees',
+  'best_rates',
+  'balanced',
+]);
+
+export const customerNeedsSchema = z.object({
+  products: z
+    .array(bankingProductSchema)
+    .optional()
+    .describe('Banking products the user wants to compare or set up'),
+  creditCardPreference: creditCardPreferenceSchema
+    .optional()
+    .describe('What the user values most in a credit card'),
+  balanceTier: balanceTierSchema
+    .optional()
+    .describe('Expected typical account balance: low, medium, or high'),
+  priority: comparisonPrioritySchema
+    .optional()
+    .describe('Whether the user cares most about fees, rates, or both'),
+  notes: z
+    .string()
+    .optional()
+    .describe('Short free-form context gathered from the conversation'),
+});
+
+export type CustomerNeeds = z.infer<typeof customerNeedsSchema>;
+export type BankingProduct = z.infer<typeof bankingProductSchema>;

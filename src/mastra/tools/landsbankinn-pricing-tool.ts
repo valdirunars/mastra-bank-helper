@@ -4,17 +4,17 @@ import {
   bankPricingCatalogSchema,
   bankPricingToolInputSchema,
 } from './bank-pricing-schemas';
-import { runBankScraperFor } from './run-bank-pricing-scraper';
+import { readBankPricingFor } from './read-bank-pricing';
 import { resolveBankToolInput } from './resolve-bank-tool-input';
 
 export const landsbankinnPricingTool = createTool({
   id: 'get-landsbankinn-pricing',
   description:
-    'Fetch Landsbankinn pricing for a single bank. For cross-bank comparisons use compare-bank-pricing instead. Pass language ("is" or "en") and topic to filter results.',
+    'Read pre-scraped Landsbankinn pricing from disk. For cross-bank comparisons use compare-bank-pricing instead. Pass language ("is" or "en") and topic to filter results. Requires running npm run scrape:landsbankinn first.',
   inputSchema: bankPricingToolInputSchema,
   outputSchema: bankPricingCatalogSchema,
   execute: async (inputData, context) => {
-    return runBankScraperFor(
+    return readBankPricingFor(
       'landsbankinn',
       resolveBankToolInput(inputData, context),
     );

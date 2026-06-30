@@ -1,4 +1,5 @@
 output.txt
+.scraper-output/
 __pycache__/
 *.py[cod]
 .venv/
