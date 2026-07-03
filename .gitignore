@@ -1,4 +1,6 @@
 output.txt
+
+# Scraped bank pricing JSON (see package.json scrape:* scripts)
 .scraper-output/
 __pycache__/
 *.py[cod]

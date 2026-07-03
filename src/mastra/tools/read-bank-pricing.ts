@@ -10,6 +10,8 @@ import { filterCatalogByTopic } from './filter-catalog';
 import { resolveProjectRoot } from './project-root';
 import {
   resolveScraperLocale,
+  SCRAPER_BANKS,
+  SCRAPER_LOCALES,
   type ScraperBank,
   type ScraperLocale,
 } from './scraper-config';
@@ -24,9 +26,18 @@ export function getBankPricingOutputPath(
   return path.join(OUTPUT_DIR, `${bank}.${locale}.json`);
 }
 
-function scrapeCommandFor(bank: ScraperBank, locale: ScraperLocale): string {
+export function scrapeCommandFor(
+  bank: ScraperBank,
+  locale: ScraperLocale,
+): string {
   const suffix = locale === 'en' ? ':en' : '';
   return `npm run scrape:${bank}${suffix}`;
+}
+
+export function allScrapeCommands(): string[] {
+  return SCRAPER_BANKS.flatMap((bank) =>
+    SCRAPER_LOCALES.map((locale) => scrapeCommandFor(bank, locale)),
+  );
 }
 
 async function pathExists(target: string): Promise<boolean> {
@@ -36,6 +47,35 @@ async function pathExists(target: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+export async function bankPricingDataExists(
+  bank: ScraperBank,
+  language?: ScraperLocale,
+): Promise<boolean> {
+  const locale = resolveScraperLocale(language);
+  const projectRoot = await resolveProjectRoot();
+  const outputPath = path.join(
+    projectRoot,
+    getBankPricingOutputPath(bank, locale),
+  );
+  return pathExists(outputPath);
+}
+
+export async function listMissingBankPricing(
+  banks: ScraperBank[],
+  language?: ScraperLocale,
+): Promise<ScraperBank[]> {
+  const locale = resolveScraperLocale(language);
+  const missing: ScraperBank[] = [];
+
+  for (const bank of banks) {
+    if (!(await bankPricingDataExists(bank, locale))) {
+      missing.push(bank);
+    }
+  }
+
+  return missing;
 }
 
 export async function readBankPricingFor(
@@ -52,7 +92,7 @@ export async function readBankPricingFor(
   if (!(await pathExists(outputPath))) {
     throw new Error(
       `Bank pricing data not found at ${getBankPricingOutputPath(bank, locale)}. ` +
-        `Run \`${scrapeCommandFor(bank, locale)}\` first.`,
+        'Call the scrape-bank-pricing tool first (requires user approval).',
     );
   }
 

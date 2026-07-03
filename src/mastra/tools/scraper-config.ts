@@ -1,6 +1,9 @@
 export type ScraperBank = 'arion' | 'landsbankinn';
 export type ScraperLocale = 'is' | 'en';
 
+export const SCRAPER_BANKS: ScraperBank[] = ['arion', 'landsbankinn'];
+export const SCRAPER_LOCALES: ScraperLocale[] = ['is', 'en'];
+
 const SCRAPER_CONFIGS: Record<ScraperBank, Record<ScraperLocale, string>> = {
   arion: {
     is: 'scrapers/config.arion.json',

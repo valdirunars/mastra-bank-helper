@@ -7,6 +7,7 @@ import {
   pricingItemSchema,
   rateItemSchema,
 } from './bank-pricing-schemas';
+import { assertCompleteScrapedData } from './assert-scraped-data';
 import { compareBankPricing } from './compare-bank-pricing';
 import { resolveBankToolInput } from './resolve-bank-tool-input';
 import { readBothBankPricing } from './read-bank-pricing';
@@ -30,7 +31,7 @@ const sideRateSchema = z
 export const compareBankPricingTool = createTool({
   id: 'compare-bank-pricing',
   description:
-    'Compare latest Arion and Landsbankinn pricing and rates from pre-scraped data on disk. Returns a structured comparison. Pass customerNeeds with products and preferences gathered from the conversation. Pass language ("is" or "en") to pick Icelandic or English source files. Requires running npm run scrape:arion and npm run scrape:landsbankinn first.',
+    'Compare latest Arion and Landsbankinn pricing and rates from saved scrape files on disk. Requires all four scrape outputs; if missing, call scrape-bank-pricing first. Pass customerNeeds with products and preferences gathered from the conversation. Pass language ("is" or "en") to pick Icelandic or English source files.',
   inputSchema: bankPricingToolInputSchema.extend({
     focus: z
       .enum(['rates', 'pricing', 'all'])
@@ -93,6 +94,8 @@ export const compareBankPricingTool = createTool({
     summaryText: z.string(),
   }),
   execute: async (inputData, context) => {
+    await assertCompleteScrapedData();
+
     const resolved = resolveBankToolInput(inputData, context);
     const { arion, landsbankinn } = await readBothBankPricing(resolved);
 

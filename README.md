@@ -1,24 +1,53 @@
 # mastra-bank-helper
 
-Welcome to your new [Mastra](https://mastra.ai/) project! We're excited to see what you'll build.
+A [Mastra](https://mastra.ai/) app that compares Icelandic bank pricing and rates for [Arion](https://www.arionbanki.is) and [Landsbankinn](https://www.landsbankinn.is). The agent reads saved pricing data from disk — it does not fetch live bank pages on every question. If data is missing, the comparison tool asks you to confirm before scraping.
 
 ## Getting Started
 
-Start the development server:
+### 1. Install dependencies
+
+```shell
+npm install
+cp .env.example .env
+```
+
+Set `GOOGLE_API_KEY` in `.env` (or configure another model provider in `src/mastra/agents/bank-agent-model.ts`).
+
+### 2. Start the development server
 
 ```shell
 npm run dev
 ```
 
-Open [http://localhost:4111](http://localhost:4111) in your browser to access [Mastra Studio](https://mastra.ai/docs/studio/overview). It provides an interactive UI for building and testing your agents, along with a REST API that exposes your Mastra application as a local service. This lets you start building without worrying about integration right away.
+Open [http://localhost:4111](http://localhost:4111) to access [Mastra Studio](https://mastra.ai/docs/studio/overview) and test the bank comparison agent.
 
-You can start editing files inside the `src/mastra` directory. The development server will automatically reload whenever you make changes.
+When you ask for a comparison and no saved pricing data exists yet, the agent pauses and asks you to confirm scraping. On confirm it scrapes all four files (Arion and Landsbankinn, Icelandic and English). Scraping uses Python + Chrome and takes about 1–3 minutes per file. The scraper environment is installed automatically on first scrape.
+
+### Optional: scrape bank data manually
+
+You can pre-fetch pricing data instead of waiting for an in-chat confirmation:
+
+```shell
+npm run scrape:install   # once — Python venv + dependencies
+npm run scrape:all       # arion.is, arion.en, landsbankinn.is, landsbankinn.en
+```
+
+Or run individual scripts:
+
+```shell
+npm run scrape:arion
+npm run scrape:arion:en
+npm run scrape:landsbankinn
+npm run scrape:landsbankinn:en
+```
+
+Output is written to `.scraper-output/` (gitignored). Re-run when you need fresh pricing data. See [scrapers/README.md](scrapers/README.md) for details.
 
 ## Learn more
 
-To learn more about Mastra, visit our [documentation](https://mastra.ai/docs/). Your bootstrapped project includes example code for [agents](https://mastra.ai/docs/agents/overview), [tools](https://mastra.ai/docs/agents/using-tools), [workflows](https://mastra.ai/docs/workflows/overview), [scorers](https://mastra.ai/docs/evals/overview), and [observability](https://mastra.ai/docs/observability/overview).
-
-If you're new to AI agents, check out our [course](https://mastra.ai/learn) and [YouTube videos](https://youtube.com/@mastra-ai). You can also join our [Discord](https://discord.gg/BTYqqHKUrf) community to get help and share your projects.
+- [Scraper setup and options](scrapers/README.md)
+- [Mastra documentation](https://mastra.ai/docs/)
+- [Agents](https://mastra.ai/docs/agents/overview), [tools](https://mastra.ai/docs/agents/using-tools), [workflows](https://mastra.ai/docs/workflows/overview), [scorers](https://mastra.ai/docs/evals/overview)
 
 ## Deploy to the Mastra platform
 

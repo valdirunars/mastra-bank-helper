@@ -6,6 +6,7 @@ import type { CoreSystemMessage } from '@mastra/core/llm';
 import { arionPricingTool } from '../tools/arion-pricing-tool';
 import { compareBankPricingTool } from '../tools/compare-bank-pricing-tool';
 import { landsbankinnPricingTool } from '../tools/landsbankinn-pricing-tool';
+import { scrapeBankPricingTool } from '../tools/scrape-bank-pricing-tool';
 import { languageSystemAppend, detectLanguageFromMessages } from '../tools/resolve-bank-tool-input';
 import { bankComparisonScorers } from '../scorers/bank-comparison-scorer';
 import { bankAgentModel } from './bank-agent-model';
@@ -16,7 +17,8 @@ Always use scraped data from disk — never guess prices or rates.
 
 ## Tools
 
-- compare-bank-pricing — PRIMARY tool. Reads both banks from pre-scraped files and returns a structured comparison. Call only after you understand what the user needs.
+- scrape-bank-pricing — fetches all four scrape files (Arion + Landsbankinn, Icelandic + English). Always requires user approval in the UI before it runs. Call when pricing data is missing or incomplete.
+- compare-bank-pricing — PRIMARY tool. Reads both banks from saved scrape files and returns a structured comparison. Call only after scrape data exists (use scrape-bank-pricing first if needed).
 - get-arion-pricing — single-bank Arion lookup only.
 - get-landsbankinn-pricing — single-bank Landsbankinn lookup only.
 
@@ -38,8 +40,9 @@ When asking questions, ask at most 3 at a time and explain why you need the info
 ## Workflow
 
 1. Clarify the user's banking needs when needed.
-2. Call compare-bank-pricing with topic, focus, language, audience, and customerNeeds matching the conversation.
-3. Answer using summaryText as your base and tailor the recommendation to their profile.
+2. If compare or pricing tools report missing/incomplete scrape data, call scrape-bank-pricing and wait for the user to approve it in the UI. Tell the user what will be scraped and that approval is required.
+3. After scraping succeeds (or if data already exists), call compare-bank-pricing with topic, focus, language, audience, and customerNeeds matching the conversation.
+4. Answer using summaryText as your base and tailor the recommendation to their profile.
 
 Topic examples (Icelandic user):
 - general individual pricing → focus: "pricing", topic: "einstaklingar"
@@ -58,7 +61,8 @@ Do not call get-arion-pricing and get-landsbankinn-pricing before compare-bank-p
 - Give a direct answer first (which bank fits the user's setup best).
 - Summarize key matched fees/rates for their products; mention bank-only items when relevant.
 - Cite source documents from the comparison result.
-- If pricing data is missing, tell the user to run the scrape scripts first (npm run scrape:arion and npm run scrape:landsbankinn, or the :en variants for English).
+- When scrape-bank-pricing is pending, tell the user to approve the tool call in the UI before scraping can start.
+- If the user declines scraping, explain they can run npm run scrape:all manually.
 
 Write the entire response in one language only. No chain-of-thought tags.`;
 
@@ -88,6 +92,7 @@ export const bankComparisonAgent = new Agent({
   instructions: BASE_INSTRUCTIONS,
   model: bankAgentModel,
   tools: {
+    scrapeBankPricingTool,
     compareBankPricingTool,
     arionPricingTool,
     landsbankinnPricingTool,

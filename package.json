@@ -15,7 +15,8 @@
     "scrape:arion": ".venv/bin/python -m scrapers --config scrapers/config.arion.json --output json --output-file .scraper-output/arion.is.json",
     "scrape:arion:en": ".venv/bin/python -m scrapers --config scrapers/config.arion.en.json --output json --output-file .scraper-output/arion.en.json",
     "scrape:landsbankinn": ".venv/bin/python -m scrapers --config scrapers/config.landsbankinn.json --output json --output-file .scraper-output/landsbankinn.is.json",
-    "scrape:landsbankinn:en": ".venv/bin/python -m scrapers --config scrapers/config.landsbankinn.en.json --output json --output-file .scraper-output/landsbankinn.en.json"
+    "scrape:landsbankinn:en": ".venv/bin/python -m scrapers --config scrapers/config.landsbankinn.en.json --output json --output-file .scraper-output/landsbankinn.en.json",
+    "scrape:all": "npm run scrape:arion && npm run scrape:arion:en && npm run scrape:landsbankinn && npm run scrape:landsbankinn:en"
   },
   "keywords": [],
   "author": "",

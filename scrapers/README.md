@@ -7,7 +7,9 @@ English pages are also supported for models that handle English better than Icel
 - [Arion (EN)](https://www.arionbanki.is/en/bank/data/rates)
 - [Landsbankinn (EN)](https://www.landsbankinn.is/en/interest-rates-and-fees)
 
-## Setup (once)
+## Setup (when scraping)
+
+Install the Python scraper environment once before the first scrape (manual or in-chat):
 
 ```bash
 npm run scrape:install
@@ -17,12 +19,22 @@ Requires Python 3 and Chrome.
 
 ## Scrape a bank
 
+All four output files (Icelandic + English for both banks):
+
+```bash
+npm run scrape:all
+```
+
+Individual scripts:
+
 ```bash
 npm run scrape:arion
 npm run scrape:landsbankinn
 npm run scrape:arion:en
 npm run scrape:landsbankinn:en
 ```
+
+Files are written to `.scraper-output/` (`arion.is.json`, `arion.en.json`, `landsbankinn.is.json`, `landsbankinn.en.json`) and are gitignored.
 
 Save to a file:
 
