@@ -11,9 +11,46 @@ npm install
 cp .env.example .env
 ```
 
-Set `GOOGLE_API_KEY` in `.env` (or configure another model provider in `src/mastra/agents/bank-agent-model.ts`).
+### 2. Configure the language model
 
-### 2. Start the development server
+The agent model is defined in `src/mastra/agents/bank-agent-model.ts`. This project defaults to a **local Ollama** model.
+
+#### Option A: Ollama (default)
+
+1. Install [Ollama](https://ollama.com/) and make sure it is running.
+2. Pull a model that exists on your machine. The default is `qwen2.5:7b-instruct` (recommended for reliable tool calling):
+
+   ```shell
+   ollama pull qwen2.5:7b-instruct
+   ```
+
+3. Optional: override the model in `.env` (the tag must already be pulled locally):
+
+   ```env
+   BANK_AGENT_MODEL=your-model:tag
+   ```
+
+   Avoid `qwen3` for this agent — it tends to skip tool calls and return empty responses in Studio. See comments in `bank-agent-model.ts`.
+
+   Scraper locale follows the model name by default (English PDFs for qwen/llama/mistral/phi/gemma). Set `BANK_SCRAPER_LOCALE=is` in `.env` to force Icelandic scrape configs.
+
+#### Option B: Google Gemini
+
+1. Add your API key to `.env`:
+
+   ```env
+   GOOGLE_GENERATIVE_AI_API_KEY=your-api-key
+   ```
+
+2. Switch the model in `src/mastra/agents/bank-agent-model.ts` from Ollama to a Google model string, for example:
+
+   ```typescript
+   export const bankAgentModel = 'google/gemini-2.5-flash';
+   ```
+
+   Other Google models: `google/gemini-2.5-pro`, etc.
+
+### 3. Start the development server
 
 ```shell
 npm run dev
