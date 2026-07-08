@@ -1,5 +1,12 @@
 output.txt
 
+# macOS
+.DS_Store
+
+# Mastra / DuckDB runtime storage
+*.duckdb
+*.duckdb.wal
+
 # Scraped bank pricing JSON (see package.json scrape:* scripts)
 .scraper-output/
 __pycache__/
