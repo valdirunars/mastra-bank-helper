@@ -2,6 +2,8 @@
 
 A [Mastra](https://mastra.ai/) app that compares Icelandic bank pricing and rates for [Arion](https://www.arionbanki.is) and [Landsbankinn](https://www.landsbankinn.is). The agent reads saved pricing data from disk — it does not fetch live bank pages on every question. If data is missing, the comparison tool asks you to confirm before scraping.
 
+<video src="https://github.com/valdirunars/mastra-bank-helper/raw/main/mastra%20demo.mp4" controls width="100%"></video>
+
 ## Getting Started
 
 ### 1. Install dependencies
