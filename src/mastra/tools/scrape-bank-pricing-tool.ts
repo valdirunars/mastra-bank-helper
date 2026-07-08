@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { getBankPricingOutputPath } from './read-bank-pricing';
 import { runAllBankScrapers } from './run-bank-scraper';
+import { writeScrapeMetadata } from './scraped-data-metadata';
 import {
   SCRAPER_BANKS,
   SCRAPER_LOCALES,
@@ -52,8 +53,11 @@ export const scrapeBankPricingTool = createTool({
       })),
     );
 
+    const scrapedAt = new Date().toISOString();
+    await writeScrapeMetadata(scrapedAt);
+
     return {
-      scrapedAt: new Date().toISOString(),
+      scrapedAt,
       files,
       message:
         'Scraped Arion and Landsbankinn pricing for Icelandic and English. You can now call compare-bank-pricing or single-bank pricing tools.',

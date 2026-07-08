@@ -11,6 +11,7 @@ import { assertCompleteScrapedData } from './assert-scraped-data';
 import { compareBankPricing } from './compare-bank-pricing';
 import { resolveBankToolInput } from './resolve-bank-tool-input';
 import { readBothBankPricing } from './read-bank-pricing';
+import { getScrapeDataAge } from './scraped-data-metadata';
 
 const sidePricingSchema = z
   .object({
@@ -49,6 +50,8 @@ export const compareBankPricingTool = createTool({
   }),
   outputSchema: z.object({
     comparedAt: z.string(),
+    scrapedAt: z.string().nullable(),
+    scrapedDataIsOlderThanWeek: z.boolean().nullable(),
     focus: z.enum(['rates', 'pricing', 'all']),
     topic: z.string().nullable(),
     sources: z.object({
@@ -97,14 +100,23 @@ export const compareBankPricingTool = createTool({
     await assertCompleteScrapedData();
 
     const resolved = resolveBankToolInput(inputData, context);
-    const { arion, landsbankinn } = await readBothBankPricing(resolved);
+    const [scrapeAge, { arion, landsbankinn }] = await Promise.all([
+      getScrapeDataAge(),
+      readBothBankPricing(resolved),
+    ]);
 
-    return compareBankPricing(arion, landsbankinn, {
+    const comparison = compareBankPricing(arion, landsbankinn, {
       topic: resolved.topic,
       focus: resolved.focus ?? 'all',
       audience: resolved.audience ?? 'individuals',
       language: resolved.language,
       customerNeeds: resolved.customerNeeds,
     });
+
+    return {
+      ...comparison,
+      scrapedAt: scrapeAge?.scrapedAt ?? null,
+      scrapedDataIsOlderThanWeek: scrapeAge?.isOlderThanWeek ?? null,
+    };
   },
 });
